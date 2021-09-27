@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import './widgets/transaction_list.dart';
 import './widgets/chart.dart';
 import './widgets/new_transaction.dart';
 import './models/Transaction.dart';
 
-void main() => {runApp(MyApp())};
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.landscapeLeft,
+  ]);
+  runApp(MyApp());
+}
 
 class MyApp extends StatelessWidget {
   @override
@@ -55,6 +63,8 @@ class _MyHomePageState extends State<MyHomePage> {
     }).toList();
   }
 
+  bool _showChart = false;
+
   void _deleteTransaction(String id) {
     setState(() {
       _usertransactions.removeWhere((tx) => tx.id == id);
@@ -75,6 +85,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _startAddNewTransaction(BuildContext ctx) {
     showModalBottomSheet(
+        isScrollControlled: true,
         context: ctx,
         builder: (_) {
           return GestureDetector(
@@ -87,35 +98,65 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
     final _appBar = AppBar(
       backgroundColor: Theme.of(context).primaryColor,
       title: Text("Personal Finance"),
       actions: [
         IconButton(
             onPressed: () => _startAddNewTransaction(context),
-            icon: Icon(Icons.add))
+            icon: Icon(Icons.add)),
+        if(isLandscape)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text("Chart"),
+            Switch(
+                value: _showChart,
+                onChanged: (val) {
+                  setState(() {
+                    _showChart = val;
+                  });
+                }),
+          ],
+        ),
       ],
     );
+    final txListWidget = Container(
+        height: (MediaQuery.of(context).size.height -
+                _appBar.preferredSize.height -
+                MediaQuery.of(context).padding.top) *
+            0.7,
+        child: TransactionList(_usertransactions, _deleteTransaction));
     return MaterialApp(
       home: Scaffold(
         appBar: _appBar,
         body: SingleChildScrollView(
-            child: Column(
+          child: Column(
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                  height: (MediaQuery.of(context).size.height -
-                          _appBar.preferredSize.height -
-                          MediaQuery.of(context).padding.top) *
-                      0.4,
-                  child: Chart(_recentTransaction)),
-              Container(
-                  height: (MediaQuery.of(context).size.height -
-                          _appBar.preferredSize.height -
-                          MediaQuery.of(context).padding.top) *
-                      0.6,
-                  child: TransactionList(_usertransactions, _deleteTransaction)),
+              if(isLandscape) Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+              ),
+              if (!isLandscape)
+                Container(
+                    height: (MediaQuery.of(context).size.height -
+                            _appBar.preferredSize.height -
+                            MediaQuery.of(context).padding.top) *
+                        0.3,
+                    child: Chart(_recentTransaction)),
+              if (!isLandscape) txListWidget,
+              if (isLandscape)
+                (_showChart)
+                    ? Container(
+                        height: (MediaQuery.of(context).size.height -
+                                _appBar.preferredSize.height -
+                                MediaQuery.of(context).padding.top) *
+                            0.7,
+                        child: Chart(_recentTransaction))
+                    : txListWidget,
             ],
           ),
         ),
