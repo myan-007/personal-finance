@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -98,75 +101,109 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-    final _appBar = AppBar(
-      backgroundColor: Theme.of(context).primaryColor,
-      title: Text("Personal Finance"),
-      actions: [
-        IconButton(
-            onPressed: () => _startAddNewTransaction(context),
-            icon: Icon(Icons.add)),
-        if(isLandscape)
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text("Chart"),
-            Switch(
-                value: _showChart,
-                onChanged: (val) {
-                  setState(() {
-                    _showChart = val;
-                  });
-                }),
-          ],
-        ),
-      ],
-    );
+    final mediaquery = MediaQuery.of(context);
+    final isLandscape = mediaquery.orientation == Orientation.landscape;
+    final PreferredSizeWidget _appBar = Platform.isIOS
+        ? CupertinoNavigationBar(
+            middle: Text("Personal Finance"),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: () => _startAddNewTransaction(context),
+                  child: Icon(CupertinoIcons.add),
+                ),
+                if (isLandscape) Text("Chart"),
+                if (isLandscape)
+                  Switch.adaptive(
+                      activeColor: Colors.indigo.shade100,
+                      value: _showChart,
+                      onChanged: (val) {
+                        setState(() {
+                          _showChart = val;
+                        });
+                      }),
+              ],
+            ))
+        : AppBar(
+            backgroundColor: Theme.of(context).primaryColor,
+            title: Text("Personal Finance"),
+            actions: [
+              IconButton(
+                  onPressed: () => _startAddNewTransaction(context),
+                  icon: Icon(Icons.add)),
+              if (isLandscape)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text("Chart"),
+                    Switch.adaptive(
+                        activeColor: Colors.indigo.shade200,
+                        value: _showChart,
+                        onChanged: (val) {
+                          setState(() {
+                            _showChart = val;
+                          });
+                        }),
+                  ],
+                ),
+            ],
+          );
+
     final txListWidget = Container(
-        height: (MediaQuery.of(context).size.height -
+        height: (mediaquery.size.height -
                 _appBar.preferredSize.height -
-                MediaQuery.of(context).padding.top) *
+                mediaquery.padding.top) *
             0.7,
         child: TransactionList(_usertransactions, _deleteTransaction));
-    return MaterialApp(
-      home: Scaffold(
-        appBar: _appBar,
-        body: SingleChildScrollView(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              if(isLandscape) Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-              ),
-              if (!isLandscape)
-                Container(
-                    height: (MediaQuery.of(context).size.height -
+    final appbody = SafeArea(child: SingleChildScrollView(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center, 
+        children: [
+          if (isLandscape)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+            ),
+          if (!isLandscape)
+            Container(
+                height: (mediaquery.size.height -
+                        _appBar.preferredSize.height -
+                        mediaquery.padding.top) *
+                    0.3,
+                child: Chart(_recentTransaction)),
+          if (!isLandscape) txListWidget,
+          if (isLandscape)
+            (_showChart)
+                ? Container(
+                    height: (mediaquery.size.height -
                             _appBar.preferredSize.height -
-                            MediaQuery.of(context).padding.top) *
-                        0.3,
-                    child: Chart(_recentTransaction)),
-              if (!isLandscape) txListWidget,
-              if (isLandscape)
-                (_showChart)
-                    ? Container(
-                        height: (MediaQuery.of(context).size.height -
-                                _appBar.preferredSize.height -
-                                MediaQuery.of(context).padding.top) *
-                            0.7,
-                        child: Chart(_recentTransaction))
-                    : txListWidget,
-            ],
-          ),
-        ),
-        floatingActionButton: FloatingActionButton(
-          backgroundColor: Colors.indigo,
-          foregroundColor: Colors.white,
-          onPressed: () => _startAddNewTransaction(context),
-          child: Icon(Icons.add),
-        ),
+                            mediaquery.padding.top) *
+                        0.7,
+                    child: Chart(_recentTransaction))
+                : txListWidget,
+        ],
       ),
+    ));
+    return MaterialApp(
+      home: Platform.isIOS
+          ? CupertinoPageScaffold(
+              child: appbody,
+              navigationBar: _appBar,
+            )
+          : Scaffold(
+              appBar: _appBar,
+              body: appbody,
+              floatingActionButton: Platform.isIOS
+                  ? SizedBox()
+                  : FloatingActionButton(
+                      backgroundColor: Colors.indigo,
+                      foregroundColor: Colors.white,
+                      onPressed: () => _startAddNewTransaction(context),
+                      child: Icon(Icons.add),
+                    ),
+            ),
     );
   }
 }
